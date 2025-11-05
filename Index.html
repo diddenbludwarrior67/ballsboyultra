@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pandora Ball Shooter - Ultimate</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Orbitron', 'Arial', sans-serif;
+        }
+        
+        body {
+            background: radial-gradient(circle at center, #0a0a0a 0%, #000000 100%);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 95vw;
+            height: 95vh;
+            display: flex;
+            box-shadow: 0 0 50px rgba(255, 0, 100, 0.7);
+            border-radius: 15px;
+            overflow: hidden;
+            background: linear-gradient(145deg, #1a0a1a 0%, #0a0a1a 100%);
+            border: 2px solid #ff0064;
+        }
+        
+        #gameArea {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: radial-gradient(circle at 30% 30%, #1a0a1a 0%, #0a0a0a 100%);
+        }
+        
+        #uiPanel {
+            width: 350px;
+            background: linear-gradient(165deg, 
+                rgba(40, 5, 25, 0.95) 0%, 
+                rgba(70, 10, 40, 0.95) 50%, 
+                rgba(40, 5, 25, 0.95) 100%);
+            border-left: 3px solid #ff0064;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -8px 0 25px rgba(255, 0, 100, 0.5);
+            backdrop-filter: blur(15px);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #uiPanel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, 
+                transparent, 
+                #ff0064, 
+                #ff4da6,
+                #ff0064,
+                transparent);
+            animation: panelGlow 4s infinite;
+            z-index: 2;
+        }
+        
+        @keyframes panelGlow {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+        
+        .panel-section {
+            background: rgba(20, 5, 15, 0.8);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 0, 100, 0.6);
+            margin-bottom: 25px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .panel-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(255, 0, 100, 0.8), 
+                transparent);
+        }
+        
+        .section-title {
+            color: #ff4da6;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 8px rgba(255, 0, 100, 0.7);
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 0, 100, 0.4);
+            padding-bottom: 8px;
+        }
+        
+        .statRow {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+        
+        .statLabel {
+            color: #ff80bf;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .statValue {
+            color: #fff;
+            font-weight: bold;
+            font-size: 16px;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+        }
+        
+        .bar-container {
+            height: 22px;
+            background: rgba(30, 10, 20, 0.9);
+            border-radius: 11px;
+            margin-top: 8px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid rgba(255, 0, 100, 0.4);
+        }
+        
+        .bar-fill {
+            height: 100%;
+            border-radius: 11px;
+            transition: width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, 
+                rgba(255,255,255,0.3) 0%, 
+                rgba(255,255,255,0.6) 50%, 
+                rgba(255,255,255,0.3) 100%);
+            animation: shine 2.5s infinite;
+        }
+        
+        @keyframes shine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        #healthFill {
+            background: linear-gradient(90deg, #ff0064, #ff4da6);
+        }
+        
+        #armorFill {
+            background: linear-gradient(90deg, #3a7bd5, #00d2ff);
+        }
+        
+        #weaponDisplay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #weaponImage {
+            height: 100px;
+            width: 100%;
+            background: rgba(30, 10, 20, 0.9);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255, 0, 100, 0.7);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #weaponImage::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(255, 0, 100, 0.2) 0%, 
+                rgba(255, 77, 166, 0.2) 100%);
+            z-index: 1;
+        }
+        
+        #weaponName {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ff4da6;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(255, 0, 100, 0.7);
+            margin-bottom: 10px;
+        }
+        
+        .shop-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        
+        .shop-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .shop-container::-webkit-scrollbar-track {
+            background: rgba(20, 5, 15, 0.8);
+            border-radius: 4px;
+        }
+        
+        .shop-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, #ff0064, #ff4da6);
+            border-radius: 4px;
+        }
+        
+        .shop-category {
+            margin-bottom: 20px;
+        }
+        
+        .category-title {
+            color: #ff80bf;
+            margin-bottom: 12px;
+            font-size: 16px;
+            border-bottom: 1px solid rgba(255, 0, 100, 0.5);
+            padding-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .shop-items {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .shop-item {
+            background: rgba(40, 15, 25, 0.9);
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .shop-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(255, 0, 100, 0.1) 0%, 
+                rgba(255, 77, 166, 0.1) 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .shop-item:hover {
+            border-color: #ff0064;
+            background: rgba(50, 20, 30, 0.9);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(255, 0, 100, 0.4);
+        }
+        
+        .shop-item:hover::before {
+            opacity: 1;
+        }
+        
+        .item-name {
+            color: #fff;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 5px;
+            z-index: 1;
+        }
+        
+        .item-price {
+            color: #ffd700;
+            font-size: 13px;
+            font-weight: bold;
+            z-index: 1;
+        }
+        
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 28px;
+            height: 28px;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        .crosshair-line {
+            position: absolute;
+            background: #ff0064;
+            box-shadow: 0 0 5px rgba(255, 0, 100, 0.8);
+        }
+        
+        .horizontal {
+            width: 20px;
+            height: 3px;
+            top: 12.5px;
+            left: 4px;
+        }
+        
+        .vertical {
+            width: 3px;
+            height: 20px;
+            left: 12.5px;
+            top: 4px;
+        }
+        
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        #scoreDisplay {
+            font-size: 28px;
+            color: #fff;
+            text-shadow: 0 0 10px #ff0064;
+            background: rgba(20, 5, 15, 0.7);
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 0, 100, 0.6);
+        }
+        
+        #waveDisplay {
+            font-size: 22px;
+            color: #ff80bf;
+            text-shadow: 0 0 8px rgba(255, 0, 100, 0.7);
+            background: rgba(20, 5, 15, 0.7);
+            padding: 10px 18px;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 0, 100, 0.6);
+        }
+        
+        #gameMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 42px;
+            color: #ff0064;
+            text-shadow: 0 0 15px #000;
+            text-align: center;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.5s;
+            background: rgba(20, 5, 15, 0.9);
+            padding: 25px 50px;
+            border-radius: 15px;
+            border: 3px solid rgba(255, 0, 100, 0.7);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        #bossHealth {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 25px;
+            background: rgba(40, 15, 25, 0.9);
+            border-radius: 12px;
+            overflow: hidden;
+            z-index: 10;
+            display: none;
+            border: 2px solid rgba(255, 0, 100, 0.7);
+        }
+        
+        #bossHealthFill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0064, #ff4da6);
+            width: 100%;
+            transition: width 0.4s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #bossHealthFill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, 
+                rgba(255,255,255,0.3) 0%, 
+                rgba(255,255,255,0.6) 50%, 
+                rgba(255,255,255,0.3) 100%);
+            animation: shine 2s infinite;
+        }
+        
+        #bossName {
+            position: absolute;
+            top: 130px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ff4da6;
+            font-size: 22px;
+            text-shadow: 0 0 10px #000;
+            z-index: 10;
+            display: none;
+            background: rgba(20, 5, 15, 0.9);
+            padding: 8px 20px;
+            border-radius: 8px;
+            border: 2px solid rgba(255, 0, 100, 0.7);
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .game-button {
+            background: linear-gradient(145deg, #ff0064, #ff4da6);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .game-button:hover {
+            background: linear-gradient(145deg, #ff4da6, #ff80bf);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 18px rgba(255, 0, 100, 0.5);
+        }
+        
+        .game-button:active {
+            transform: translateY(0);
+        }
+        
+        .game-button::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(255,255,255,0.3) 0%, 
+                rgba(255,255,255,0) 50%, 
+                rgba(255,255,255,0.3) 100%);
+            transform: translateX(-100%);
+            transition: transform 0.5s;
+        }
+        
+        .game-button:hover::after {
+            transform: translateX(100%);
+        }
+        
+        #controlsInfo {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(20, 5, 15, 0.8);
+            padding: 12px 18px;
+            border-radius: 8px;
+            border: 2px solid rgba(255, 0, 100, 0.6);
+            font-size: 14px;
+            z-index: 10;
+            color: #ff80bf;
+        }
+        
+        #shopToggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .weapon-hotkey {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            z-index: 10;
+        }
+        
+        .hotkey-slot {
+            width: 50px;
+            height: 50px;
+            background: rgba(20, 5, 15, 0.8);
+            border: 2px solid rgba(255, 0, 100, 0.6);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ff80bf;
+            font-weight: bold;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .hotkey-slot.active {
+            border-color: #ff0064;
+            background: rgba(255, 0, 100, 0.3);
+            color: #fff;
+            box-shadow: 0 0 10px rgba(255, 0, 100, 0.7);
+        }
+        
+        .hotkey-slot:hover {
+            transform: scale(1.1);
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="gameArea">
+            <canvas id="gameCanvas"></canvas>
+            <div id="crosshair">
+                <div class="crosshair-line horizontal"></div>
+                <div class="crosshair-line vertical"></div>
+            </div>
+            <div id="hud">
+                <div id="scoreDisplay">SCORE: 0</div>
+                <div id="waveDisplay">WAVE: 1</div>
+            </div>
+            <div id="gameMessage"></div>
+            <div id="bossHealth">
+                <div id="bossHealthFill"></div>
+            </div>
+            <div id="bossName"></div>
+            <div id="controlsInfo">
+                MOVE: WASD | SHOOT: MOUSE | RELOAD: R | WEAPONS: 1-5
+            </div>
+            <div class="weapon-hotkey">
+                <div class="hotkey-slot active" data-weapon="pistol">1</div>
+                <div class="hotkey-slot" data-weapon="smg">2</div>
+                <div class="hotkey-slot" data-weapon="shotgun">3</div>
+                <div class="hotkey-slot" data-weapon="rifle">4</div>
+                <div class="hotkey-slot" data-weapon="sniper">5</div>
+            </div>
+            <button id="shopToggle" class="game-button">≡</button>
+        </div>
+        <div id="uiPanel">
+            <div class="panel-section" id="playerStats">
+                <div class="section-title">Player Status</div>
+                <div class="statRow">
+                    <span class="statLabel">Health:</span>
+                    <span class="statValue" id="healthValue">100</span>
+                </div>
+                <div class="bar-container">
+                    <div id="healthFill" class="bar-fill" style="width: 100%;"></div>
+                </div>
+                <div class="statRow">
+                    <span class="statLabel">Armor:</span>
+                    <span class="statValue" id="armorValue">0</span>
+                </div>
+                <div class="bar-container">
+                    <div id="armorFill" class="bar-fill" style="width: 0%;"></div>
+                </div>
+                <div class="statRow">
+                    <span class="statLabel">Money:</span>
+                    <span class="statValue" id="moneyValue">$1000</span>
+                </div>
+            </div>
+            <div class="panel-section" id="weaponInfo">
+                <div class="section-title">Current Weapon</div>
+                <div id="weaponDisplay">
+                    <div id="weaponName">Pistol</div>
+                    <div id="weaponImage">WEAPON</div>
+                    <div id="ammoInfo" class="statRow">
+                        <span class="statLabel">Ammo:</span>
+                        <span class="statValue" id="ammoValue">12/36</span>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-section">
+                <div class="section-title">Pandora Armory</div>
+                <div class="shop-container">
+                    <div class="shop-category">
+                        <div class="category-title">Primary Weapons</div>
+                        <div class="shop-items">
+                            <div class="shop-item" data-item="pistol" data-price="0">
+                                <div class="item-name">Pistol</div>
+                                <div class="item-price">$0</div>
+                            </div>
+                            <div class="shop-item" data-item="smg" data-price="500">
+                                <div class="item-name">SMG</div>
+                                <div class="item-price">$500</div>
+                            </div>
+                            <div class="shop-item" data-item="shotgun" data-price="800">
+                                <div class="item-name">Shotgun</div>
+                                <div class="item-price">$800</div>
+                            </div>
+                            <div class="shop-item" data-item="rifle" data-price="1200">
+                                <div class="item-name">Assault Rifle</div>
+                                <div class="item-price">$1200</div>
+                            </div>
+                            <div class="shop-item" data-item="sniper" data-price="2000">
+                                <div class="item-name">Sniper Rifle</div>
+                                <div class="item-price">$2000</div>
+                            </div>
+                            <div class="shop-item" data-item="minigun" data-price="3500">
+                                <div class="item-name">Minigun</div>
+                                <div class="item-price">$3500</div>
+                            </div>
+                            <div class="shop-item" data-item="rocket" data-price="4000">
+                                <div class="item-name">Rocket Launcher</div>
+                                <div class="item-price">$4000</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="shop-category">
+                        <div class="category-title">Secondary Weapons</div>
+                        <div class="shop-items">
+                            <div class="shop-item" data-item="dualPistols" data-price="1500">
+                                <div class="item-name">Dual Pistols</div>
+                                <div class="item-price">$1500</div>
+                            </div>
+                            <div class="shop-item" data-item="revolver" data-price="1800">
+                                <div class="item-name">Revolver</div>
+                                <div class="item-price">$1800</div>
+                            </div>
+                            <div class="shop-item" data-item="burstRifle" data-price="2200">
+                                <div class="item-name">Burst Rifle</div>
+                                <div class="item-price">$2200</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="shop-category">
+                        <div class="category-title">Special Weapons</div>
+                        <div class="shop-items">
+                            <div class="shop-item" data-item="plasma" data-price="5000">
+                                <div class="item-name">Plasma Gun</div>
+                                <div class="item-price">$5000</div>
+                            </div>
+                            <div class="shop-item" data-item="railgun" data-price="6000">
+                                <div class="item-name">Railgun</div>
+                                <div class="item-price">$6000</div>
+                            </div>
+                            <div class="shop-item" data-item="flamethrower" data-price="4500">
+                                <div class="item-name">Flamethrower</div>
+                                <div class="item-price">$4500</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="shop-category">
+                        <div class="category-title">Armor & Protection</div>
+                        <div class="shop-items">
+                            <div class="shop-item" data-item="lightArmor" data-price="400">
+                                <div class="item-name">Light Armor</div>
+                                <div class="item-price">$400</div>
+                            </div>
+                            <div class="shop-item" data-item="heavyArmor" data-price="800">
+                                <div class="item-name">Heavy Armor</div>
+                                <div class="item-price">$800</div>
+                            </div>
+                            <div class="shop-item" data-item="shield" data-price="1200">
+                                <div class="item-name">Energy Shield</div>
+                                <div class="item-price">$1200</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="shop-category">
+                        <div class="category-title">Upgrades</div>
+                        <div class="shop-items">
+                            <div class="shop-item" data-item="health" data-price="300">
+                                <div class="item-name">Health Pack</div>
+                                <div class="item-price">$300</div>
+                            </div>
+                            <div class="shop-item" data-item="ammo" data-price="200">
+                                <div class="item-name">Ammo Refill</div>
+                                <div class="item-price">$200</div>
+                            </div>
+                            <div class="shop-item" data-item="damageBoost" data-price="1000">
+                                <div class="item-name">Damage Boost</div>
+                                <div class="item-price">$1000</div>
+                            </div>
+                            <div class="shop-item" data-item="speedBoost" data-price="800">
+                                <div class="item-name">Speed Boost</div>
+                                <div class="item-price">$800</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button id="startWave" class="game-button">Start Wave</button>
+                <button id="bossFight" class="game-button">Boss Fight</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const waveDisplay = document.getElementById('waveDisplay');
+        const gameMessage = document.getElementById('gameMessage');
+        const healthValue = document.getElementById('healthValue');
+        const armorValue = document.getElementById('armorValue');
+        const moneyValue = document.getElementById('moneyValue');
+        const ammoValue = document.getElementById('ammoValue');
+        const weaponName = document.getElementById('weaponName');
+        const healthFill = document.getElementById('healthFill');
+        const armorFill = document.getElementById('armorFill');
+        const bossHealth = document.getElementById('bossHealth');
+        const bossHealthFill = document.getElementById('bossHealthFill');
+        const bossName = document.getElementById('bossName');
+        const startWaveBtn = document.getElementById('startWave');
+        const bossFightBtn = document.getElementById('bossFight');
+        const shopToggle = document.getElementById('shopToggle');
+        const uiPanel = document.getElementById('uiPanel');
+        const hotkeySlots = document.querySelectorAll('.hotkey-slot');
+        
+        // Set canvas size
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+        
+        // Game state
+        let score = 0;
+        let money = 1000;
+        let health = 100;
+        let armor = 0;
+        let currentWeapon = 'pistol';
+        let currentWave = 1;
+        let ammo = {
+            pistol: { current: 12, max: 36 },
+            smg: { current: 30, max: 90 },
+            shotgun: { current: 8, max: 32 },
+            rifle: { current: 30, max: 90 },
+            sniper: { current: 5, max: 20 },
+            minigun: { current: 100, max: 300 },
+            rocket: { current: 3, max: 9 },
+            dualPistols: { current: 24, max: 72 },
+            revolver: { current: 6, max: 18 },
+            burstRifle: { current: 30, max: 90 },
+            plasma: { current: 50, max: 150 },
+            railgun: { current: 3, max: 9 },
+            flamethrower: { current: 100, max: 300 }
+        };
+        
+        let balls = [];
+        let playerBullets = [];
+        let isWaveActive = false;
+        let isBossActive = false;
+        let boss = null;
+        let keys = {};
+        let shopVisible = true;
+        let playerSpeed = 5;
+        let playerDamageMultiplier = 1;
+        
+        // Weapon properties
+        const weapons = {
+            pistol: { 
+                name: 'Pistol', 
+                damage: 10, 
+                fireRate: 500, 
+                bulletSpeed: 10,
+                spread: 0.05,
+                color: '#ff4da6'
+            },
+            smg: { 
+                name: 'SMG', 
+                damage: 5, 
+                fireRate: 100, 
+                bulletSpeed: 12,
+                spread: 0.1,
+                color: '#00d2ff'
+            },
+            shotgun: { 
+                name: 'Shotgun', 
+                damage: 8, 
+                fireRate: 800, 
+                bulletSpeed: 8,
+                spread: 0.3,
+                pellets: 5,
+                color: '#ffd700'
+            },
+            rifle: { 
+                name: 'Assault Rifle', 
+                damage: 15, 
+                fireRate: 150, 
+                bulletSpeed: 15,
+                spread: 0.05,
+                color: '#7cfc00'
+            },
+            sniper: { 
+                name: 'Sniper Rifle', 
+                damage: 50, 
+                fireRate: 1000, 
+                bulletSpeed: 20,
+                spread: 0.01,
+                color: '#ff4500'
+            },
+            minigun: { 
+                name: 'Minigun', 
+                damage: 3, 
+                fireRate: 50, 
+                bulletSpeed: 15,
+                spread: 0.2,
+                color: '#ff0064'
+            },
+            rocket: { 
+                name: 'Rocket Launcher', 
+                damage: 100, 
+                fireRate: 1500, 
+                bulletSpeed: 8,
+                spread: 0.0,
+                explosionRadius: 60,
+                color: '#ff8c00'
+            },
+            dualPistols: { 
+                name: 'Dual Pistols', 
+                damage: 8, 
+                fireRate: 250, 
+                bulletSpeed: 12,
+                spread: 0.08,
+                color: '#da70d6'
+            },
+            revolver: { 
+                name: 'Revolver', 
+                damage: 35, 
+                fireRate: 600, 
+                bulletSpeed: 15,
+                spread: 0.03,
+                color: '#b8860b'
+            },
+            burstRifle: { 
+                name: 'Burst Rifle', 
+                damage: 12, 
+                fireRate: 300, 
+                bulletSpeed: 16,
+                spread: 0.06,
+                burst: 3,
+                color: '#00fa9a'
+            },
+            plasma: { 
+                name: 'Plasma Gun', 
+                damage: 20, 
+                fireRate: 200, 
+                bulletSpeed: 10,
+                spread: 0.05,
+                color: '#00ffff'
+            },
+            railgun: { 
+                name: 'Railgun', 
+                damage: 150, 
+                fireRate: 2000, 
+                bulletSpeed: 30,
+                spread: 0.0,
+                pierce: true,
+                color: '#4b0082'
+            },
+            flamethrower: { 
+                name: 'Flamethrower', 
+                damage: 2, 
+                fireRate: 30, 
+                bulletSpeed: 8,
+                spread: 0.4,
+                color: '#ff4500'
+            }
+        };
+        
+        // Player class
+        class Player {
+            constructor() {
+                this.x = canvas.width / 2;
+                this.y = canvas.height / 2;
+                this.width = 40;
+                this.height = 40;
+                this.color = '#ff0064';
+                this.lastShot = 0;
+                this.speed = playerSpeed;
+                this.angle = 0;
+            }
+            
+            update() {
+                // Handle movement
+                if (keys['KeyW'] || keys['ArrowUp']) this.y -= this.speed;
+                if (keys['KeyS'] || keys['ArrowDown']) this.y += this.speed;
+                if (keys['KeyA'] || keys['ArrowLeft']) this.x -= this.speed;
+                if (keys['KeyD'] || keys['ArrowRight']) this.x += this.speed;
+                
+                // Keep player within bounds
+                this.x = Math.max(this.width/2, Math.min(canvas.width - this.width/2, this.x));
+                this.y = Math.max(this.height/2, Math.min(canvas.height - this.height/2, this.y));
+                
+                // Update angle based on mouse position (for visual only)
+                this.angle = Math.atan2(
+                    canvas.height/2 - this.y, 
+                    canvas.width/2 - this.x
+                );
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                
+                // Draw player as a tank-like shape
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
+                
+                // Draw turret
+                ctx.fillStyle = '#ff4da6';
+                ctx.fillRect(-15, -25, 30, 10);
+                
+                // Draw barrel
+                ctx.fillStyle = '#ff80bf';
+                ctx.fillRect(0, -20, 25, 5);
+                
+                ctx.restore();
+                
+                // Add glow effect
