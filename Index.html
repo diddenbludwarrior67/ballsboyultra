@@ -980,3 +980,750 @@
                 ctx.restore();
                 
                 // Add glow effect
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 20;
+                ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                ctx.shadowBlur = 0;
+            }
+            
+            shoot(targetX, targetY) {
+                const now = Date.now();
+                const weapon = weapons[currentWeapon];
+                
+                if (now - this.lastShot < weapon.fireRate) return;
+                if (ammo[currentWeapon].current <= 0) return;
+                
+                this.lastShot = now;
+                ammo[currentWeapon].current--;
+                updateAmmoDisplay();
+                
+                // Handle different weapon types
+                if (currentWeapon === 'shotgun') {
+                    // Shotgun fires multiple pellets
+                    for (let i = 0; i < weapon.pellets; i++) {
+                        const angle = Math.atan2(targetY - this.y, targetX - this.x);
+                        const spread = (Math.random() - 0.5) * weapon.spread;
+                        const bullet = new Bullet(
+                            this.x, 
+                            this.y, 
+                            angle + spread, 
+                            weapon.bulletSpeed,
+                            weapon.damage * playerDamageMultiplier,
+                            weapon.color
+                        );
+                        playerBullets.push(bullet);
+                    }
+                } else if (currentWeapon === 'burstRifle') {
+                    // Burst rifle fires multiple shots in quick succession
+                    for (let i = 0; i < weapon.burst; i++) {
+                        setTimeout(() => {
+                            const angle = Math.atan2(targetY - this.y, targetX - this.x);
+                            const spread = (Math.random() - 0.5) * weapon.spread;
+                            const bullet = new Bullet(
+                                this.x, 
+                                this.y, 
+                                angle + spread, 
+                                weapon.bulletSpeed,
+                                weapon.damage * playerDamageMultiplier,
+                                weapon.color
+                            );
+                            playerBullets.push(bullet);
+                        }, i * 50);
+                    }
+                } else if (currentWeapon === 'rocket') {
+                    // Rocket launcher creates explosion on impact
+                    const angle = Math.atan2(targetY - this.y, targetX - this.x);
+                    const rocket = new Rocket(
+                        this.x, 
+                        this.y, 
+                        angle, 
+                        weapon.bulletSpeed,
+                        weapon.damage * playerDamageMultiplier,
+                        weapon.color,
+                        weapon.explosionRadius
+                    );
+                    playerBullets.push(rocket);
+                } else if (currentWeapon === 'railgun') {
+                    // Railgun pierces through enemies
+                    const angle = Math.atan2(targetY - this.y, targetX - this.x);
+                    const railgun = new Railgun(
+                        this.x, 
+                        this.y, 
+                        angle, 
+                        weapon.bulletSpeed,
+                        weapon.damage * playerDamageMultiplier,
+                        weapon.color
+                    );
+                    playerBullets.push(railgun);
+                } else {
+                    // Standard weapon fires single bullet
+                    const angle = Math.atan2(targetY - this.y, targetX - this.x);
+                    const spread = (Math.random() - 0.5) * weapon.spread;
+                    const bullet = new Bullet(
+                        this.x, 
+                        this.y, 
+                        angle + spread, 
+                        weapon.bulletSpeed,
+                        weapon.damage * playerDamageMultiplier,
+                        weapon.color
+                    );
+                    playerBullets.push(bullet);
+                }
+            }
+        }
+        
+        // Bullet class
+        class Bullet {
+            constructor(x, y, angle, speed, damage, color) {
+                this.x = x;
+                this.y = y;
+                this.angle = angle;
+                this.speed = speed;
+                this.damage = damage;
+                this.color = color;
+                this.radius = 4;
+                this.pierce = false;
+            }
+            
+            update() {
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+            }
+            
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add a glow effect
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 10;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+            
+            isOffScreen() {
+                return this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height;
+            }
+        }
+        
+        // Rocket class (extends Bullet)
+        class Rocket extends Bullet {
+            constructor(x, y, angle, speed, damage, color, explosionRadius) {
+                super(x, y, angle, speed, damage, color);
+                this.radius = 8;
+                this.explosionRadius = explosionRadius;
+            }
+            
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add a glow effect
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 15;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                
+                // Draw rocket trail
+                ctx.strokeStyle = '#ff8c00';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x - Math.cos(this.angle) * 15, this.y - Math.sin(this.angle) * 15);
+                ctx.lineTo(this.x, this.y);
+                ctx.stroke();
+            }
+            
+            explode() {
+                // Create explosion effect
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2;
+                    const explosionParticle = new Bullet(
+                        this.x, 
+                        this.y, 
+                        angle, 
+                        3, 
+                        this.damage * 0.3, 
+                        '#ff8c00'
+                    );
+                    explosionParticle.radius = 6;
+                    playerBullets.push(explosionParticle);
+                }
+                
+                // Damage all balls in explosion radius
+                for (let i = balls.length - 1; i >= 0; i--) {
+                    const ball = balls[i];
+                    const dx = this.x - ball.x;
+                    const dy = this.y - ball.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < this.explosionRadius + ball.radius) {
+                        const isDead = ball.takeDamage(this.damage * 0.7);
+                        
+                        if (isDead) {
+                            score += ball.value;
+                            money += ball.value / 2;
+                            balls.splice(i, 1);
+                            
+                            if (ball.type === 'boss') {
+                                endBossFight();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Railgun class (extends Bullet)
+        class Railgun extends Bullet {
+            constructor(x, y, angle, speed, damage, color) {
+                super(x, y, angle, speed, damage, color);
+                this.radius = 6;
+                this.pierce = true;
+            }
+            
+            draw() {
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(this.x - Math.cos(this.angle) * 20, this.y - Math.sin(this.angle) * 20);
+                ctx.lineTo(this.x + Math.cos(this.angle) * 20, this.y + Math.sin(this.angle) * 20);
+                ctx.stroke();
+                
+                // Add a glow effect
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 15;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+        }
+        
+        // Ball class
+        class Ball {
+            constructor(type = 'normal') {
+                this.radius = type === 'boss' ? 80 : (20 + Math.random() * 30);
+                this.x = Math.random() * (canvas.width - this.radius * 2) + this.radius;
+                this.y = -this.radius;
+                this.speed = type === 'boss' ? 1.5 : (1 + Math.random() * 3);
+                this.color = type === 'boss' ? '#ff0064' : this.getRandomColor();
+                this.health = type === 'boss' ? 800 : (30 + Math.random() * 40);
+                this.maxHealth = this.health;
+                this.type = type;
+                this.value = type === 'boss' ? 1000 : Math.floor(this.radius * 2);
+            }
+            
+            getRandomColor() {
+                const colors = ['#ff0064', '#ff4da6', '#ff80bf', '#00d2ff', '#7cfc00'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+            
+            update() {
+                this.y += this.speed;
+                
+                // Bounce off walls
+                if (this.x - this.radius < 0 || this.x + this.radius > canvas.width) {
+                    this.speed *= -1;
+                }
+            }
+            
+            draw() {
+                // Draw ball
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add a glow effect
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 20;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                
+                // Draw health bar for boss
+                if (this.type === 'boss') {
+                    const barWidth = this.radius * 2;
+                    const barHeight = 10;
+                    const barX = this.x - this.radius;
+                    const barY = this.y - this.radius - 20;
+                    
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(barX, barY, barWidth, barHeight);
+                    
+                    ctx.fillStyle = '#7cfc00';
+                    ctx.fillRect(barX, barY, (this.health / this.maxHealth) * barWidth, barHeight);
+                }
+            }
+            
+            isOffScreen() {
+                return this.y - this.radius > canvas.height;
+            }
+            
+            takeDamage(damage) {
+                this.health -= damage;
+                return this.health <= 0;
+            }
+        }
+        
+        // Boss class
+        class Boss extends Ball {
+            constructor() {
+                super('boss');
+                this.speed = 2;
+                this.attackCooldown = 0;
+                this.attackRate = 50; // Frames between attacks
+            }
+            
+            update() {
+                // Move in a pattern
+                this.x += Math.sin(this.y / 40) * 3;
+                this.y += this.speed;
+                
+                // Attack player
+                this.attackCooldown++;
+                if (this.attackCooldown >= this.attackRate) {
+                    this.attack();
+                    this.attackCooldown = 0;
+                }
+            }
+            
+            attack() {
+                // Create enemy bullets that target the player
+                for (let i = 0; i < 12; i++) {
+                    const angle = (i / 12) * Math.PI * 2;
+                    balls.push(new BossBullet(this.x, this.y, angle, 4));
+                }
+            }
+        }
+        
+        // Boss bullet class
+        class BossBullet {
+            constructor(x, y, angle, speed) {
+                this.x = x;
+                this.y = y;
+                this.angle = angle;
+                this.speed = speed;
+                this.radius = 10;
+                this.color = '#ff0064';
+                this.damage = 15;
+            }
+            
+            update() {
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+            }
+            
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add a glow effect
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 15;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+            
+            isOffScreen() {
+                return this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height;
+            }
+        }
+        
+        // Create player
+        const player = new Player();
+        
+        // Game functions
+        function updateAmmoDisplay() {
+            ammoValue.textContent = `${ammo[currentWeapon].current}/${ammo[currentWeapon].max}`;
+        }
+        
+        function updateStats() {
+            healthValue.textContent = health;
+            armorValue.textContent = armor;
+            moneyValue.textContent = `$${money}`;
+            healthFill.style.width = `${health}%`;
+            armorFill.style.width = `${armor}%`;
+            weaponName.textContent = weapons[currentWeapon].name;
+            scoreDisplay.textContent = `SCORE: ${score}`;
+            waveDisplay.textContent = `WAVE: ${currentWave}`;
+        }
+        
+        function showMessage(text, duration = 2000) {
+            gameMessage.textContent = text;
+            gameMessage.style.opacity = 1;
+            
+            setTimeout(() => {
+                gameMessage.style.opacity = 0;
+            }, duration);
+        }
+        
+        function startWave() {
+            if (isWaveActive || isBossActive) return;
+            
+            isWaveActive = true;
+            const ballCount = 12 + Math.floor(currentWave * 1.5);
+            
+            for (let i = 0; i < ballCount; i++) {
+                setTimeout(() => {
+                    balls.push(new Ball());
+                }, i * 400);
+            }
+            
+            showMessage(`WAVE ${currentWave} INCOMING!`);
+            
+            // End wave after all balls are gone
+            setTimeout(() => {
+                if (isWaveActive) {
+                    checkWaveEnd();
+                }
+            }, ballCount * 400 + 5000);
+        }
+        
+        function checkWaveEnd() {
+            if (balls.length === 0 && isWaveActive) {
+                isWaveActive = false;
+                currentWave++;
+                money += 300;
+                updateStats();
+                showMessage(`WAVE CLEARED! +$300`);
+            }
+        }
+        
+        function startBossFight() {
+            if (isBossActive || isWaveActive) return;
+            
+            isBossActive = true;
+            boss = new Boss();
+            balls.push(boss);
+            
+            bossHealth.style.display = 'block';
+            bossName.style.display = 'block';
+            bossName.textContent = 'FATALITY BOSS';
+            
+            showMessage('BOSS INCOMING!', 3000);
+        }
+        
+        function endBossFight() {
+            isBossActive = false;
+            boss = null;
+            bossHealth.style.display = 'none';
+            bossName.style.display = 'none';
+            money += 2000;
+            currentWave++;
+            updateStats();
+            showMessage('BOSS DEFEATED! +$2000', 3000);
+        }
+        
+        function takeDamage(damage) {
+            if (armor > 0) {
+                const armorDamage = Math.min(armor, damage * 0.7);
+                armor -= armorDamage;
+                damage -= armorDamage;
+            }
+            
+            health -= damage;
+            
+            if (health <= 0) {
+                health = 0;
+                gameOver();
+            }
+            
+            updateStats();
+        }
+        
+        function gameOver() {
+            showMessage('FATALITY! GAME OVER', 5000);
+            isWaveActive = false;
+            isBossActive = false;
+            balls = [];
+            playerBullets = [];
+            
+            // Reset game after delay
+            setTimeout(() => {
+                health = 100;
+                armor = 0;
+                score = 0;
+                money = 1000;
+                currentWeapon = 'pistol';
+                currentWave = 1;
+                playerSpeed = 5;
+                playerDamageMultiplier = 1;
+                updateStats();
+                updateAmmoDisplay();
+                updateHotkeyDisplay();
+            }, 5000);
+        }
+        
+        function buyItem(item, price) {
+            if (money < price) {
+                showMessage('NOT ENOUGH MONEY!');
+                return;
+            }
+            
+            money -= price;
+            
+            switch(item) {
+                case 'pistol':
+                case 'smg':
+                case 'shotgun':
+                case 'rifle':
+                case 'sniper':
+                case 'minigun':
+                case 'rocket':
+                case 'dualPistols':
+                case 'revolver':
+                case 'burstRifle':
+                case 'plasma':
+                case 'railgun':
+                case 'flamethrower':
+                    currentWeapon = item;
+                    updateHotkeyDisplay();
+                    break;
+                case 'lightArmor':
+                    armor = Math.min(50, armor + 50);
+                    break;
+                case 'heavyArmor':
+                    armor = Math.min(100, armor + 100);
+                    break;
+                case 'shield':
+                    armor = Math.min(150, armor + 150);
+                    break;
+                case 'health':
+                    health = Math.min(100, health + 50);
+                    break;
+                case 'ammo':
+                    for (const weapon in ammo) {
+                        ammo[weapon].current = ammo[weapon].max;
+                    }
+                    break;
+                case 'damageBoost':
+                    playerDamageMultiplier *= 1.5;
+                    showMessage('DAMAGE BOOSTED!');
+                    break;
+                case 'speedBoost':
+                    playerSpeed += 2;
+                    showMessage('SPEED BOOSTED!');
+                    break;
+            }
+            
+            updateStats();
+            updateAmmoDisplay();
+            showMessage(`PURCHASED: ${item.toUpperCase()}`);
+        }
+        
+        function updateHotkeyDisplay() {
+            hotkeySlots.forEach(slot => {
+                const weapon = slot.getAttribute('data-weapon');
+                if (weapon === currentWeapon) {
+                    slot.classList.add('active');
+                } else {
+                    slot.classList.remove('active');
+                }
+            });
+        }
+        
+        // Event listeners
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const targetX = e.clientX - rect.left;
+            const targetY = e.clientY - rect.top;
+            
+            player.shoot(targetX, targetY);
+        });
+        
+        // Keyboard controls
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            
+            // Reload with R key
+            if (e.code === 'KeyR') {
+                ammo[currentWeapon].current = ammo[currentWeapon].max;
+                updateAmmoDisplay();
+                showMessage('RELOADED!');
+            }
+            
+            // Weapon hotkeys
+            if (e.code >= 'Digit1' && e.code <= 'Digit5') {
+                const weaponIndex = parseInt(e.code[5]) - 1;
+                const weaponKeys = ['pistol', 'smg', 'shotgun', 'rifle', 'sniper'];
+                if (weaponIndex < weaponKeys.length) {
+                    currentWeapon = weaponKeys[weaponIndex];
+                    updateHotkeyDisplay();
+                    updateAmmoDisplay();
+                    weaponName.textContent = weapons[currentWeapon].name;
+                }
+            }
+        });
+        
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+        
+        startWaveBtn.addEventListener('click', startWave);
+        bossFightBtn.addEventListener('click', startBossFight);
+        
+        // Shop toggle
+        shopToggle.addEventListener('click', () => {
+            shopVisible = !shopVisible;
+            uiPanel.style.display = shopVisible ? 'flex' : 'none';
+            shopToggle.textContent = shopVisible ? '≡' : '≡';
+        });
+        
+        // Shop item click handlers
+        document.querySelectorAll('.shopItem').forEach(item => {
+            item.addEventListener('click', () => {
+                const itemType = item.getAttribute('data-item');
+                const price = parseInt(item.getAttribute('data-price'));
+                buyItem(itemType, price);
+            });
+        });
+        
+        // Hotkey click handlers
+        hotkeySlots.forEach(slot => {
+            slot.addEventListener('click', () => {
+                const weapon = slot.getAttribute('data-weapon');
+                currentWeapon = weapon;
+                updateHotkeyDisplay();
+                updateAmmoDisplay();
+                weaponName.textContent = weapons[currentWeapon].name;
+            });
+        });
+        
+        // Game loop
+        function gameLoop() {
+            // Clear canvas with a subtle gradient
+            const gradient = ctx.createRadialGradient(
+                canvas.width/2, canvas.height/2, 0,
+                canvas.width/2, canvas.height/2, canvas.width/2
+            );
+            gradient.addColorStop(0, 'rgba(10, 5, 15, 0.3)');
+            gradient.addColorStop(1, 'rgba(5, 2, 8, 0.7)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Update and draw player
+            player.update();
+            player.draw();
+            
+            // Update and draw balls
+            for (let i = balls.length - 1; i >= 0; i--) {
+                const ball = balls[i];
+                ball.update();
+                ball.draw();
+                
+                // Check if ball is off screen
+                if (ball.isOffScreen()) {
+                    balls.splice(i, 1);
+                    
+                    // Only take damage if ball touches the bottom (not walls)
+                    if (ball.y - ball.radius > canvas.height) {
+                        takeDamage(ball.type === 'boss' ? 40 : 15);
+                    }
+                    
+                    continue;
+                }
+                
+                // Check collision with player
+                const dx = player.x - ball.x;
+                const dy = player.y - ball.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < (player.width / 2) + ball.radius) {
+                    takeDamage(ball.type === 'boss' ? 40 : 15);
+                    balls.splice(i, 1);
+                    continue;
+                }
+                
+                // Update boss health display
+                if (ball.type === 'boss') {
+                    bossHealthFill.style.width = `${(ball.health / ball.maxHealth) * 100}%`;
+                    
+                    if (ball.health <= 0) {
+                        balls.splice(i, 1);
+                        score += ball.value;
+                        endBossFight();
+                    }
+                }
+            }
+            
+            // Update and draw bullets
+            for (let i = playerBullets.length - 1; i >= 0; i--) {
+                const bullet = playerBullets[i];
+                bullet.update();
+                bullet.draw();
+                
+                // Handle rocket explosion
+                if (bullet instanceof Rocket && bullet.isOffScreen()) {
+                    bullet.explode();
+                    playerBullets.splice(i, 1);
+                    continue;
+                }
+                
+                // Remove bullets that are off screen
+                if (bullet.isOffScreen()) {
+                    playerBullets.splice(i, 1);
+                    continue;
+                }
+                
+                // Check collision with balls
+                for (let j = balls.length - 1; j >= 0; j--) {
+                    const ball = balls[j];
+                    const dx = bullet.x - ball.x;
+                    const dy = bullet.y - ball.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < bullet.radius + ball.radius) {
+                        // Hit detected
+                        const isDead = ball.takeDamage(bullet.damage);
+                        
+                        if (isDead) {
+                            score += ball.value;
+                            money += ball.value / 2;
+                            balls.splice(j, 1);
+                            
+                            if (ball.type === 'boss') {
+                                endBossFight();
+                            }
+                        }
+                        
+                        // Handle rocket explosion on impact
+                        if (bullet instanceof Rocket) {
+                            bullet.explode();
+                        }
+                        
+                        // Remove bullet unless it pierces
+                        if (!bullet.pierce) {
+                            playerBullets.splice(i, 1);
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // Check if wave has ended
+            if (isWaveActive && balls.length === 0) {
+                checkWaveEnd();
+            }
+            
+            updateStats();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Initialize game
+        updateStats();
+        updateAmmoDisplay();
+        updateHotkeyDisplay();
+        gameLoop();
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        });
+    </script>
+</body>
+</html>
